@@ -10,6 +10,14 @@ const {
   OPENAI_API_KEY,
 } = process.env;
 
+type LFCDoc = {
+    _id?: string;
+    id?: string;
+    text: string;
+    url?: string;
+    $vector?: number[];
+    createdAt?: Date | string;
+  };
 // Use SDK client for embeddings
 const openaiClient = new OpenAI({
   apiKey: OPENAI_API_KEY,
@@ -34,14 +42,15 @@ export async function POST(req: Request) {
 
     // ---- Vector search in Astra
     try {
-      const collection = await db.collection(ASTRA_DB_COLLECTION!);
-      const cursor = collection.find(null, {
-        sort: { $vector: embedding.data[0].embedding },
-        limit: 10,
-      });
-      const documents = await cursor.toArray();
-      const docsMap = documents?.map((doc: any) => doc.text);
-      docContext = JSON.stringify(docsMap);
+        const collection = await db.collection<LFCDoc>(ASTRA_DB_COLLECTION!);
+        const cursor = collection.find({}, {
+          sort: { $vector: embedding.data[0].embedding },
+          limit: 10,
+        });
+        const documents = await cursor.toArray();
+        const docsMap = documents.map((doc) => doc.text);
+        docContext = JSON.stringify(docsMap);
+        
     } catch (err) {
       console.log("Error querying db...", err);
       docContext = "";
@@ -92,4 +101,5 @@ export async function POST(req: Request) {
   }
 }
 
+  
 export const runtime = "nodejs";
